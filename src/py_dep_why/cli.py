@@ -236,7 +236,73 @@ def doctor():
     """Light diagnostics about environment parsing quality."""
     if ctx.verbose:
         print(f"Target Python: {ctx.target_python}", file=sys.stderr)
-    print("Running diagnostics...")
+    
+    # Build graph
+    graph = build_graph()
+    
+    # Calculate stats
+    num_distributions = len(graph.nodes)
+    num_edges = sum(len(node.dependencies) for node in graph.nodes.values())
+    num_missing = len(graph.missing_deps)
+    num_unparseable = len(graph.unparseable_reqs)
+    
+    if ctx.json_output:
+        # JSON output
+        output = {
+            "schema_version": 1,
+            "environment": {
+                "python": ctx.target_python,
+                "python_version": f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+            },
+            "stats": {
+                "distributions": num_distributions,
+                "nodes": num_distributions,
+                "edges": num_edges,
+                "missing_requirements": num_missing,
+                "unparseable_requirements": num_unparseable
+            },
+            "problems": {
+                "missing_requirements": [
+                    {"from": dep.from_package, "requirement": dep.requirement}
+                    for dep in graph.missing_deps_detailed
+                ],
+                "unparseable_requirements": [
+                    {"from": req.from_package, "requirement": req.requirement}
+                    for req in graph.unparseable_reqs_detailed
+                ]
+            }
+        }
+        
+        print(json.dumps(output, indent=2))
+    else:
+        # Human-readable output
+        print("Environment Diagnostics")
+        print("=" * 50)
+        print(f"Python: {ctx.target_python}")
+        print(f"Python Version: {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}")
+        print()
+        
+        print("Statistics:")
+        print(f"  Distributions: {num_distributions}")
+        print(f"  Dependency edges: {num_edges}")
+        print(f"  Missing requirements: {num_missing}")
+        print(f"  Unparseable requirements: {num_unparseable}")
+        print()
+        
+        if num_missing > 0:
+            print("Missing Requirements:")
+            for dep in graph.missing_deps_detailed:
+                print(f"  {dep.from_package} requires {dep.requirement}")
+            print()
+        
+        if num_unparseable > 0:
+            print("Unparseable Requirements:")
+            for req in graph.unparseable_reqs_detailed:
+                print(f"  {req.from_package}: {req.requirement}")
+            print()
+        
+        if num_missing == 0 and num_unparseable == 0:
+            print("✓ No problems detected!")
 
 if __name__ == "__main__":
     app()

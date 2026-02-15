@@ -17,11 +17,27 @@ class DistNode:
 
 
 @dataclass
+class MissingDep:
+    """Represents a missing dependency."""
+    from_package: str  # normalized name of package that requires it
+    requirement: str  # normalized name of missing package
+
+
+@dataclass
+class UnparseableReq:
+    """Represents an unparseable requirement."""
+    from_package: str  # normalized name of package with bad requirement
+    requirement: str  # raw unparseable requirement string
+
+
+@dataclass
 class DependencyGraph:
     """In-memory dependency graph for the current environment."""
     nodes: Dict[str, DistNode] = field(default_factory=dict)  # normalized_name -> DistNode
-    missing_deps: Set[str] = field(default_factory=set)  # normalized names
-    unparseable_reqs: List[str] = field(default_factory=list)  # raw requirement strings
+    missing_deps: Set[str] = field(default_factory=set)  # normalized names (for backward compat)
+    unparseable_reqs: List[str] = field(default_factory=list)  # raw requirement strings (for backward compat)
+    missing_deps_detailed: List[MissingDep] = field(default_factory=list)  # detailed missing deps
+    unparseable_reqs_detailed: List[UnparseableReq] = field(default_factory=list)  # detailed unparseable reqs
 
 
 def build_graph() -> DependencyGraph:
@@ -57,6 +73,9 @@ def build_graph() -> DependencyGraph:
                 req = Requirement(req_str)
             except InvalidRequirement:
                 graph.unparseable_reqs.append(req_str)
+                graph.unparseable_reqs_detailed.append(
+                    UnparseableReq(from_package=source_name, requirement=req_str)
+                )
                 continue
             
             # Evaluate marker - skip if marker evaluates to False
@@ -69,6 +88,9 @@ def build_graph() -> DependencyGraph:
             # Check if target exists in our graph
             if target_name not in graph.nodes:
                 graph.missing_deps.add(target_name)
+                graph.missing_deps_detailed.append(
+                    MissingDep(from_package=source_name, requirement=target_name)
+                )
                 continue
             
             # Add edge from source to target

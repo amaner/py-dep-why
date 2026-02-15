@@ -1,5 +1,7 @@
 # py-dep-why — Project Specification
 
+> This document outlines the spec for this project and was created prior to development.
+
 ## 1. Summary
 
 `py-dep-why` is a Python CLI tool that explains **why** a package is present in an environment by building a dependency graph and answering questions like:

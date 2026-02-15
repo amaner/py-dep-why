@@ -306,6 +306,8 @@ re-exec should happen in the callback immediately (before any command logic runs
  Add tests verifying counts and structure using mocked distributions.
  
  **Acceptance checks:**
+
+ *Note: user will run tests manually - do not run automatically. Just output commands to run.*
  
  - `python -m py_dep_why doctor --json` matches the spec’s shape.
  - `pytest -q` passes.
