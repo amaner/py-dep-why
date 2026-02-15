@@ -172,7 +172,64 @@ def graph(
     """Export dependency graph."""
     if ctx.verbose:
         print(f"Target Python: {ctx.target_python}", file=sys.stderr)
-    print(f"Exporting graph in {format} format...")
+    
+    # If --json global flag is set, force json format
+    if ctx.json_output:
+        format = "json"
+        
+    # Build graph
+    dep_graph = build_graph()
+    
+    if format == "json":
+        # JSON output per spec
+        output = {
+            "schema_version": 1,
+            "environment": {
+                "python": ctx.target_python,
+                "python_version": f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+            },
+            "nodes": [
+                {"name": node.name, "version": node.version}
+                for node in dep_graph.nodes.values()
+            ],
+            "edges": [],
+            "warnings": list(dep_graph.missing_deps) + dep_graph.unparseable_reqs
+        }
+        
+        # Collect edges
+        for source_name, node in dep_graph.nodes.items():
+            for target_name in node.dependencies:
+                output["edges"].append({"from": source_name, "to": target_name})
+                
+        print(json.dumps(output, indent=2))
+        
+    elif format == "dot":
+        # DOT format
+        print('digraph "dependency-graph" {')
+        print('  rankdir=LR;')
+        print('  node [shape=box, style=filled, fillcolor="#ffffff"];')
+        
+        # Nodes
+        for node in dep_graph.nodes.values():
+            label = f"{node.name}\\n{node.version}"
+            print(f'  "{node.name}" [label="{label}"];')
+            
+        # Edges
+        for source_name, node in dep_graph.nodes.items():
+            for target_name in node.dependencies:
+                print(f'  "{source_name}" -> "{target_name}";')
+                
+        print('}')
+        
+    elif format == "edges":
+        # Simple edges format
+        for source_name, node in dep_graph.nodes.items():
+            for target_name in node.dependencies:
+                print(f"{source_name} -> {target_name}")
+    
+    else:
+        print(f"Unknown format: {format}", file=sys.stderr)
+        raise typer.Exit(code=1)
 
 @app.command()
 def doctor():
