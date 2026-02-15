@@ -1,8 +1,10 @@
 import sys
+import json
 import typer
 from typing import Optional
 
 from .target_env import resolve_target_python, re_exec_if_needed, TargetEnvError
+from .graph import build_graph, compute_roots
 
 app = typer.Typer(
     name="py-dep-why",
@@ -62,7 +64,35 @@ def roots(
     """List root packages."""
     if ctx.verbose:
         print(f"Target Python: {ctx.target_python}", file=sys.stderr)
-    print("Listing root packages...")
+    
+    # Build the dependency graph
+    graph = build_graph()
+    
+    # Compute roots
+    root_nodes = compute_roots(graph, include_build_tools=include_build_tools)
+    
+    # Output
+    if ctx.json_output:
+        # JSON output per spec
+        output = {
+            "schema_version": 1,
+            "roots": [
+                {"name": node.name, "version": node.version} if include_versions
+                else {"name": node.name}
+                for node in root_nodes
+            ]
+        }
+        print(json.dumps(output, indent=2))
+    else:
+        # Human-readable output
+        if not root_nodes:
+            print("No root packages found.")
+        else:
+            for node in root_nodes:
+                if include_versions:
+                    print(f"{node.name} ({node.version})")
+                else:
+                    print(node.name)
 
 @app.command()
 def graph(

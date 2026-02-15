@@ -90,3 +90,46 @@ def get_node(graph: DependencyGraph, package_name: str) -> Optional[DistNode]:
     """
     normalized = normalize_name(package_name)
     return graph.nodes.get(normalized)
+
+
+def compute_roots(graph: DependencyGraph, include_build_tools: bool = False) -> List[DistNode]:
+    """
+    Compute root packages (packages with in-degree == 0).
+    
+    Root packages are those that are not dependencies of any other package.
+    
+    Args:
+        graph: The dependency graph
+        include_build_tools: If False, filters out common build tools (pip, setuptools, wheel)
+                           only if they are roots
+        
+    Returns:
+        Sorted list of root DistNodes (sorted by normalized name)
+    """
+    # Conservative allowlist of build tools to filter
+    BUILD_TOOLS = {"pip", "setuptools", "wheel"}
+    
+    # Calculate in-degree for each node
+    in_degree = {name: 0 for name in graph.nodes}
+    
+    for node in graph.nodes.values():
+        for dep in node.dependencies:
+            if dep in in_degree:
+                in_degree[dep] += 1
+    
+    # Find roots (in-degree == 0)
+    roots = []
+    for name, degree in in_degree.items():
+        if degree == 0:
+            node = graph.nodes[name]
+            
+            # Filter build tools if requested
+            if not include_build_tools and name in BUILD_TOOLS:
+                continue
+            
+            roots.append(node)
+    
+    # Sort by normalized name
+    roots.sort(key=lambda n: n.name)
+    
+    return roots
