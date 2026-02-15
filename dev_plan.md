@@ -358,6 +358,8 @@ re-exec should happen in the callback immediately (before any command logic runs
  
  **Acceptance checks:**
  
+ *Note: user will run tests manually - do not run automatically. Just output commands to run.*
+ 
  - `pytest -q` passes with integration test skipped.
  - With `PY_DEP_WHY_INTEGRATION=1`, the integration test passes locally.
  
