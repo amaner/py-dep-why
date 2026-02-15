@@ -122,6 +122,7 @@
  
  **Acceptance checks:**
  
+ *Note: these will be run manually by user - do not run automatically. User will tell agent if they work or fail.*
  - `python -m py_dep_why --venv /does/not/exist roots` exits with code `4`.
  - `python -m py_dep_why --python x --venv y roots` exits with code `2`.
  
