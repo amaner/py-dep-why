@@ -172,6 +172,8 @@ re-exec should happen in the callback immediately (before any command logic runs
  
  **Acceptance checks:**
  
+ *Note: user will run tests manually - do not run automatically. Just output commands to run.*
+
  - `pytest -q` passes.
  - Tests cover marker false -> no edge.
  - Tests cover missing dependency -> warning captured.
@@ -197,6 +199,8 @@ re-exec should happen in the callback immediately (before any command logic runs
  Add tests for roots computation using a small synthetic graph.
  
  **Acceptance checks:**
+ 
+ *Note: user will run tests manually - do not run automatically. Just output commands to run.*
  
  - `python -m py_dep_why roots --json` emits JSON with `schema_version: 1`.
  - `pytest -q` passes.
