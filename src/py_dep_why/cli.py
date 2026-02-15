@@ -4,7 +4,8 @@ import typer
 from typing import Optional
 
 from .target_env import resolve_target_python, re_exec_if_needed, TargetEnvError
-from .graph import build_graph, compute_roots
+from .graph import build_graph, compute_roots, get_node
+from .explain import find_paths
 
 app = typer.Typer(
     name="py-dep-why",
@@ -54,7 +55,77 @@ def why(
     """Explain why a package is present by printing dependency paths."""
     if ctx.verbose:
         print(f"Target Python: {ctx.target_python}", file=sys.stderr)
-    print(f"Checking why {package} is installed...")
+    
+    # Build the dependency graph
+    graph = build_graph()
+    
+    # Check if package exists
+    target_node = get_node(graph, package)
+    if not target_node:
+        if not ctx.json_output:
+            print(f"Package '{package}' is not installed in this environment.", file=sys.stderr)
+        raise typer.Exit(code=3)
+    
+    # Find paths
+    paths, warnings = find_paths(
+        graph,
+        package,
+        max_paths=max_paths,
+        max_depth=max_depth,
+        all_paths=all_paths
+    )
+    
+    # Output
+    if ctx.json_output:
+        # JSON output per spec
+        output = {
+            "schema_version": 1,
+            "environment": {
+                "python": ctx.target_python,
+                "python_version": f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+            },
+            "target": {
+                "name": target_node.name,
+                "version": target_node.version
+            },
+            "warnings": warnings,
+            "paths": []
+        }
+        
+        for path in paths:
+            path_nodes = []
+            for pkg_name in path:
+                node = graph.nodes.get(pkg_name)
+                if node:
+                    if include_versions:
+                        path_nodes.append({"name": node.name, "version": node.version})
+                    else:
+                        path_nodes.append({"name": node.name})
+            output["paths"].append({"nodes": path_nodes})
+        
+        print(json.dumps(output, indent=2))
+    else:
+        # Human-readable output
+        if warnings:
+            for warning in warnings:
+                print(f"Warning: {warning}", file=sys.stderr)
+        
+        if not paths:
+            print(f"No dependency paths found to '{package}'.")
+        else:
+            print(f"Found {len(paths)} path(s) to '{package}':\n")
+            
+            for i, path in enumerate(paths, start=1):
+                print(f"Path {i}:")
+                for depth, pkg_name in enumerate(path):
+                    node = graph.nodes.get(pkg_name)
+                    if node:
+                        indent = "  " * depth
+                        if include_versions:
+                            print(f"{indent}{node.name} ({node.version})")
+                        else:
+                            print(f"{indent}{node.name}")
+                print()  # Blank line between paths
 
 @app.command()
 def roots(

@@ -256,6 +256,8 @@ re-exec should happen in the callback immediately (before any command logic runs
  
  **Acceptance checks:**
  
+ *Note: user will run tests manually - do not run automatically. Just output commands to run.*
+ 
  - `python -m py_dep_why why definitely-not-installed` exits `3`.
  - `pytest -q` passes.
  
