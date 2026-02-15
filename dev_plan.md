@@ -408,5 +408,7 @@ re-exec should happen in the callback immediately (before any command logic runs
  
  **Acceptance checks:**
  
+ *Note: user will run tests manually - do not run automatically. Just output commands to run.*
+ 
  - Workflow YAML is valid.
  - Local tests still pass.
