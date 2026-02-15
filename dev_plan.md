@@ -144,6 +144,8 @@
  
  Keep the re-exec logic centralized (e.g., a helper in `target_env.py`), and keep `cli.py` thin.
  
+re-exec should happen in the callback immediately (before any command logic runs).
+
  **Acceptance checks:**
  
  - When run with `--python SOME_OTHER_PY`, it executes under that interpreter (prove via `--verbose` output only; never in JSON mode).

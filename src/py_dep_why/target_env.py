@@ -1,7 +1,8 @@
 import os
 import sys
+import subprocess
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List
 
 
 class TargetEnvError(Exception):
@@ -70,3 +71,55 @@ def resolve_target_python(
         )
     
     return str(target)
+
+
+def re_exec_if_needed(target_python: str, original_args: List[str]) -> None:
+    """
+    Re-execute the tool under the target interpreter if needed.
+    
+    If target_python differs from sys.executable, this function will:
+    - Strip --python/--venv from the original args
+    - Re-invoke as: target_python -m py_dep_why <filtered_args>
+    - Exit with the subprocess exit code
+    
+    Args:
+        target_python: Resolved target interpreter path
+        original_args: Original sys.argv (including script name)
+        
+    Raises:
+        SystemExit: Always exits if re-exec happens (with subprocess exit code)
+        TargetNotFoundError: If subprocess execution fails (exit code 4)
+    """
+    # If we're already running under the target interpreter, do nothing
+    if target_python == sys.executable:
+        return
+    
+    # Filter out --python/--venv and their values from args
+    filtered_args = []
+    skip_next = False
+    
+    for i, arg in enumerate(original_args[1:], start=1):  # Skip argv[0] (script name)
+        if skip_next:
+            skip_next = False
+            continue
+        
+        if arg in ("--python", "--venv"):
+            skip_next = True  # Skip the next arg (the value)
+            continue
+        
+        # Handle --python=VALUE or --venv=VALUE
+        if arg.startswith("--python=") or arg.startswith("--venv="):
+            continue
+        
+        filtered_args.append(arg)
+    
+    # Build the re-exec command: target_python -m py_dep_why <filtered_args>
+    cmd = [target_python, "-m", "py_dep_why"] + filtered_args
+    
+    try:
+        result = subprocess.run(cmd)
+        sys.exit(result.returncode)
+    except (OSError, subprocess.SubprocessError) as e:
+        raise TargetNotFoundError(
+            f"Failed to execute target interpreter {target_python}: {e}"
+        )

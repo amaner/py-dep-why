@@ -2,7 +2,7 @@ import sys
 import typer
 from typing import Optional
 
-from .target_env import resolve_target_python, TargetEnvError
+from .target_env import resolve_target_python, re_exec_if_needed, TargetEnvError
 
 app = typer.Typer(
     name="py-dep-why",
@@ -34,6 +34,9 @@ def main(
         ctx.json_output = json
         ctx.no_color = no_color
         ctx.verbose = verbose
+        
+        # Re-exec under target interpreter if needed (before any command logic runs)
+        re_exec_if_needed(ctx.target_python, sys.argv)
     except TargetEnvError as e:
         typer.echo(f"Error: {e}", err=True)
         raise typer.Exit(code=e.exit_code)
